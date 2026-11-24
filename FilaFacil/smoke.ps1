@@ -105,7 +105,7 @@ try {
     $saved[0].Id = 29
     $saved[1].Id = 3
     $saved[0].PackageCount = [int]::MaxValue
-    [IO.File]::WriteAllText($dataFile, (ConvertTo-Json -InputObject $saved))
+    [IO.File]::WriteAllText($dataFile, (ConvertTo-Json -InputObject @($saved[0], $saved[1])))
     $null = Invoke-Menu @('1', 'Dee', 'South Road', '2', '2', '7')
     $gapped = Invoke-Menu @('2', '6', '7')
     Assert-Contains $gapped @('#30 | Dee | South Road | Packages: 2 | Priority: Medium | Status: Pending',
