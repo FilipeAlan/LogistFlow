@@ -221,3 +221,7 @@ FodyWeavers.xsd
 *.msixbundle
 *.msm
 *.msp
+
+# Local FilaFacil collection records, session lock and temporary saves
+/FilaFacil/data/
+/data/
