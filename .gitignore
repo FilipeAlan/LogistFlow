@@ -222,6 +222,7 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-# Local FilaFacil collection records, session lock and temporary saves
-/FilaFacil/data/
-/data/
+# Local LogistFlow collection records, session lock and temporary saves
+**/data/collections.json
+**/data/collections.json.tmp
+**/data/collections.lock

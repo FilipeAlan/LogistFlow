@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace FilaFacil;
+namespace LogistFlow;
 
 internal static class Program
 {
@@ -15,7 +15,7 @@ internal static class Program
         }
         catch (EndOfStreamException)
         {
-            Console.WriteLine("Input ended. Exiting FilaFacil.");
+            Console.WriteLine("Input ended. Exiting LogistFlow.");
             return 0;
         }
         catch (Exception ex) when (ex is JsonException or InvalidDataException)
@@ -24,7 +24,7 @@ internal static class Program
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Console.Error.WriteLine("Cannot access collection data. Check directory permissions and close any other FilaFacil session using this directory.");
+            Console.Error.WriteLine("Cannot access collection data. Check directory permissions and close any other LogistFlow session using this directory.");
         }
         return 1;
     }
@@ -35,7 +35,7 @@ internal static class Program
         {
             Console.WriteLine("""
 
-                FilaFacil Logistics
+                LogistFlow
                 1. Register collection
                 2. List collections
                 3. Filter by status

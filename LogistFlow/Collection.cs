@@ -1,4 +1,4 @@
-namespace FilaFacil;
+namespace LogistFlow;
 
 internal enum Priority { Low, Medium, High }
 

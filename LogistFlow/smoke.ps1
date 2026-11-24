@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$assembly = Join-Path $PSScriptRoot 'bin/Release/net10.0/FilaFacil.dll'
+$assembly = Join-Path $PSScriptRoot 'bin/Release/net10.0/LogistFlow.dll'
 if (-not (Test-Path -LiteralPath $assembly -PathType Leaf)) {
     throw 'Build the project in Release mode before running the smoke tests.'
 }
@@ -51,7 +51,7 @@ function Assert-Excludes([string]$Output, [string[]]$Excluded) {
 
 try {
     $empty = Invoke-Menu @('42', '2', '6', '7')
-    Assert-Contains $empty @('Invalid menu option', 'No collections found.', 'Total collections: 0',
+    Assert-Contains $empty @('LogistFlow', 'Invalid menu option', 'No collections found.', 'Total collections: 0',
         'Total packages: 0', 'Medium: 0', 'Completed: 0')
     $registration = Invoke-Menu @('1', ' ', 'Ada', '', 'West Road', 'x', '0', '2', '9', '3',
                                  '1', 'Ben', 'East Road', '5', '1', '7')
