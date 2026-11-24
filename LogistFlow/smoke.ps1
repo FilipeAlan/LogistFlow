@@ -8,6 +8,10 @@ $obj = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'obj')).Path
 $sandbox = Join-Path $obj ('smoke-' + [guid]::NewGuid().ToString('N'))
 $null = [IO.Directory]::CreateDirectory($sandbox)
 $dataFile = Join-Path $sandbox 'data/collections.json'
+# Reserve an unused loopback port without listening. Each child gets an offline
+# HTTPS proxy, so registration exercises the manual fallback without contacting ViaCEP.
+$offlineProxy = New-Object Net.Sockets.Socket('InterNetwork', 'Stream', 'Tcp')
+$offlineProxy.Bind([Net.IPEndPoint]::new([Net.IPAddress]::Loopback, 0))
 
 function Invoke-Menu([string[]]$Answers, [switch]$ExpectFailure) {
     $process = New-Object System.Diagnostics.Process
@@ -18,6 +22,8 @@ function Invoke-Menu([string[]]$Answers, [switch]$ExpectFailure) {
     $process.StartInfo.RedirectStandardInput = $true
     $process.StartInfo.RedirectStandardOutput = $true
     $process.StartInfo.RedirectStandardError = $true
+    $process.StartInfo.EnvironmentVariables['HTTPS_PROXY'] = "http://127.0.0.1:$($offlineProxy.LocalEndPoint.Port)"
+    $process.StartInfo.EnvironmentVariables['NO_PROXY'] = ''
     try {
         $null = $process.Start()
         $stdout = $process.StandardOutput.ReadToEndAsync()
@@ -53,26 +59,26 @@ try {
     $empty = Invoke-Menu @('42', '2', '6', '7')
     Assert-Contains $empty @('LogistFlow', 'Invalid menu option', 'No collections found.', 'Total collections: 0',
         'Total packages: 0', 'Medium: 0', 'Completed: 0')
-    $registration = Invoke-Menu @('1', ' ', 'Ada', '', 'West Road', 'x', '0', '2', '9', '3',
-                                 '1', 'Ben', 'East Road', '5', '1', '7')
+    $registration = Invoke-Menu @('1', ' ', 'Ada', 'ABCDE', '01001000', '', 'West Road', 'x', '0', '2', '9', '3',
+                                 '1', 'Ben', '20040-020', 'East Road', '5', '1', '7')
     Assert-Contains $registration @('A value is required.', 'Enter a positive whole number.',
-        'Enter a whole number from 1 to 3.')
+        'Enter a whole number from 1 to 3.', 'Enter an eight-digit postal code', 'Enter the collection address manually.')
     $saved = Get-Content -LiteralPath $dataFile -Raw | ConvertFrom-Json
     if ($saved.Count -ne 2 -or $saved[0].Status -ne 'Pending' -or $saved[1].Status -ne 'Pending') {
         throw 'Both registrations must be persisted with Pending status.'
     }
     Write-Output 'PASS: missing file, empty summary, invalid input, registration and exit.'
 
-    $first = '#1 | Ada | West Road | Packages: 2 | Priority: High | Status: Pending'
-    $second = '#2 | Ben | East Road | Packages: 5 | Priority: Low | Status: Pending'
+    $first = '#1 | Ada | West Road, CEP 01001-000 | Packages: 2 | Priority: High | Status: Pending'
+    $second = '#2 | Ben | East Road, CEP 20040-020 | Packages: 5 | Priority: Low | Status: Pending'
     Assert-Contains (Invoke-Menu @('2', '7')) @($first, $second)
     Assert-Contains (Invoke-Menu @('3', '3', '7')) @('No collections found.')
     $change = Invoke-Menu @('5', '-1', '82', '5', '1', 'bad', '2', '5', '2', '3',
-                            '1', 'Cal', 'Hill Road', '4', '3', '7')
+                            '1', 'Cal', '30140071', 'Hill Road', '4', '3', '7')
     Assert-Contains $change @('Collection not found.')
     $inRoute = $first.Replace('Pending', 'InRoute')
     $completed = $second.Replace('Pending', 'Completed')
-    $third = '#3 | Cal | Hill Road | Packages: 4 | Priority: High | Status: Pending'
+    $third = '#3 | Cal | Hill Road, CEP 30140-071 | Packages: 4 | Priority: High | Status: Pending'
     $list = Invoke-Menu @('2', '6', '7')
     Assert-Contains $list @($inRoute, $completed, $third, 'Total collections: 3', 'Total packages: 11',
         'Low: 1', 'Medium: 0', 'High: 2', 'Pending: 1', 'InRoute: 1', 'Completed: 1')
@@ -87,9 +93,9 @@ try {
     $before = (Get-FileHash -LiteralPath $dataFile).Hash
     Assert-Contains (Invoke-Menu @('1', 'Interrupted customer')) @('Input ended.')
     $null = [IO.Directory]::CreateDirectory("$dataFile.tmp")
-    $failed = Invoke-Menu @('1', 'Unsaved', 'Nowhere', '8', '2', '5', '1', '3', '2', '6', '7')
+    $failed = Invoke-Menu @('1', 'Unsaved', '01001000', 'Nowhere', '8', '2', '5', '1', '3', '2', '6', '7')
     Assert-Contains $failed @('Could not save collections.', $inRoute, 'Total collections: 3', 'Total packages: 11')
-    Assert-Excludes $failed @('#4 |', '#1 | Ada | West Road | Packages: 2 | Priority: High | Status: Completed')
+    Assert-Excludes $failed @('#4 |', $first.Replace('Pending', 'Completed'))
     if ((Get-FileHash -LiteralPath $dataFile).Hash -ne $before) { throw 'A failed edit changed the data file.' }
     [IO.Directory]::Delete("$dataFile.tmp")
     Write-Output 'PASS: interrupted input and failed saves preserve the last committed data.'
@@ -105,10 +111,11 @@ try {
     $saved[0].Id = 29
     $saved[1].Id = 3
     $saved[0].PackageCount = [int]::MaxValue
+    $saved[0].CollectionAddress = 'Legacy address'
     [IO.File]::WriteAllText($dataFile, (ConvertTo-Json -InputObject @($saved[0], $saved[1])))
-    $null = Invoke-Menu @('1', 'Dee', 'South Road', '2', '2', '7')
+    $null = Invoke-Menu @('1', 'Dee', '01001000', 'South Road', '2', '2', '7')
     $gapped = Invoke-Menu @('2', '6', '7')
-    Assert-Contains $gapped @('#30 | Dee | South Road | Packages: 2 | Priority: Medium | Status: Pending',
+    Assert-Contains $gapped @('#29 | Ada | Legacy address |', '#30 | Dee | South Road, CEP 01001-000 | Packages: 2 | Priority: Medium | Status: Pending',
         'Total collections: 3', 'Total packages: 2147483654', 'Medium: 1')
     Write-Output 'PASS: new ID follows the highest stored ID, and large package totals use 64 bits.'
 
@@ -121,6 +128,7 @@ try {
     Write-Output 'PASS: malformed JSON, incomplete records and duplicate IDs are preserved and reported at startup.'
 }
 finally {
+    $offlineProxy.Dispose()
     $testPath = (Resolve-Path -LiteralPath $sandbox).Path
     if ((Split-Path -Parent $testPath) -eq $obj -and (Split-Path -Leaf $testPath) -match '^smoke-[0-9a-f]{32}$') {
         Remove-Item -LiteralPath $testPath -Recurse -Force

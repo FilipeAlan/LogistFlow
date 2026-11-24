@@ -6,4 +6,7 @@
     <Nullable>enable</Nullable>
     <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="LogistFlow.Tests" />
+  </ItemGroup>
 </Project>

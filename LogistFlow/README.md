@@ -1,6 +1,6 @@
-# LogistFlow — Module 01: Foundations
+# LogistFlow console guide
 
-Module 01 is a .NET 10 console app for registering package collections, finding them by status or priority, and updating their status by ID. The operational summary shows total collections, total packages, and collection counts for every priority and status.
+Module 02 extends the original console with Brazilian postal address lookup. The [repository README](../README.md) covers the project layout and build and test commands. The [Module 01 release](https://github.com/FilipeAlan/LogistFlow/tree/v1.0.0) preserves the original console and its instructions.
 
 ## Run
 
@@ -10,7 +10,9 @@ In Visual Studio with .NET 10 support, open `LogistFlow.slnx` from the repositor
 dotnet run --project LogistFlow/LogistFlow.csproj
 ```
 
-Choose **1** to register a customer name, collection address, positive package count, and priority. The app assigns a numeric ID and sets the status to `Pending`. Choose **5** to update the status by ID, **6** for the summary, or **7** to exit.
+Choose **1** and enter the customer name and CEP. Review the address from ViaCEP, complete missing details, and enter a positive package count and priority. If the lookup fails, type the address manually. The app assigns a numeric ID and sets the status to `Pending`.
+
+Choose **2** for the full list, **3** or **4** for a status or priority filter, **5** to update a status by ID, **6** for the summary across all collections, or **7** to exit.
 
 ## Local data
 
@@ -24,5 +26,6 @@ Run these commands from the repository root in PowerShell. The smoke test uses d
 
 ```powershell
 dotnet build LogistFlow.slnx --configuration Release
+dotnet test LogistFlow.slnx --configuration Release --no-build
 ./LogistFlow/smoke.ps1
 ```
